@@ -1,0 +1,26 @@
+{
+  "episodes": 50,
+  "raw_candidates": 89,
+  "rejected": [],
+  "auto_adjusted": 0,
+  "duplicates_removed": 0,
+  "valid": 89,
+  "evaluation": {
+    "judged": 15,
+    "top_k_avg": {
+      "hook": 7.3,
+      "cliffhanger": 7.9,
+      "standalone": 8.8
+    },
+    "bottom_k_avg": {
+      "hook": 5.4,
+      "cliffhanger": 5.2,
+      "standalone": 8.0
+    },
+    "top_k_would_post": 10,
+    "bottom_k_would_post": 2,
+    "top_k": 10,
+    "bottom_k": 5,
+    "finder_vs_judge_hook_gap": 2.7
+  }
+}
