@@ -90,7 +90,7 @@ def episode_html(ep, segs) -> str:
 # ---------- sidebar ----------
 PROVIDERS = {   # provider -> (LiteLLM prefix, env var for the key, suggested models, where to get a key)
     "Google Gemini": ("gemini", "GEMINI_API_KEY",
-                      ["gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3.1-pro-preview"],
+                      ["gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3.1-pro-preview"],
                       "https://aistudio.google.com/apikey (free tier)"),
     "OpenAI": ("openai", "OPENAI_API_KEY", ["gpt-4o-mini", "gpt-4o", "gpt-4.1", "gpt-4.1-mini"],
                "https://platform.openai.com/api-keys"),

@@ -76,6 +76,13 @@ def ask_json(system: str, user: str, model: str = DEFAULT_MODEL, rpm: int = 8,
             CACHE_DIR.mkdir(exist_ok=True)
             cache_file.write_text(json.dumps(data), encoding="utf-8")
             return data
+        except litellm.RateLimitError as e:
+            if "PerDay" in str(e) or "per day" in str(e):      # daily cap: retrying cannot help, tell the user now
+                raise RuntimeError("Daily free-tier quota for this model is used up. Pick another model in the sidebar "
+                                   "(each model has its own quota), enter your own API key, or try again tomorrow.") from None
+            last_err = e
+            print(f"  [llm retry {attempt + 1}/5] rate limited", flush=True)
+            time.sleep(min(60, 5 * 2 ** attempt))
         except (litellm.AuthenticationError, litellm.NotFoundError, litellm.BadRequestError, litellm.PermissionDeniedError) as e:
             raise RuntimeError(f"{type(e).__name__}: check the API key and model id. {str(e).splitlines()[0][:200]}") from None
         except Exception as e:           # rate limit, bad JSON, network blip -> back off and retry
