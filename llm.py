@@ -53,7 +53,7 @@ def _parse_json(text: str) -> dict:
 
 
 def ask_json(system: str, user: str, model: str = DEFAULT_MODEL, rpm: int = 8,
-             use_cache: bool = True, temperature: float = 0.3) -> dict:
+             use_cache: bool = True, temperature: float = 0.3, api_key: str | None = None) -> dict:
     """Send a prompt, get back parsed JSON. Cached on disk so re-runs are free and deterministic."""
     key = hashlib.sha256(json.dumps([model, system, user, temperature]).encode()).hexdigest()[:24]
     cache_file = CACHE_DIR / f"{key}.json"
@@ -68,7 +68,7 @@ def ask_json(system: str, user: str, model: str = DEFAULT_MODEL, rpm: int = 8,
         try:
             _throttle(rpm)
             resp = litellm.completion(
-                model=model, temperature=temperature, timeout=240,
+                model=model, temperature=temperature, timeout=240, **({"api_key": api_key} if api_key else {}),
                 messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
                 response_format={"type": "json_object"},
             )
@@ -76,6 +76,8 @@ def ask_json(system: str, user: str, model: str = DEFAULT_MODEL, rpm: int = 8,
             CACHE_DIR.mkdir(exist_ok=True)
             cache_file.write_text(json.dumps(data), encoding="utf-8")
             return data
+        except (litellm.AuthenticationError, litellm.NotFoundError, litellm.BadRequestError, litellm.PermissionDeniedError) as e:
+            raise RuntimeError(f"{type(e).__name__}: check the API key and model id. {str(e).splitlines()[0][:200]}") from None
         except Exception as e:           # rate limit, bad JSON, network blip -> back off and retry
             last_err = e
             print(f"  [llm retry {attempt + 1}/5] {str(e).splitlines()[0][:160]}", flush=True)

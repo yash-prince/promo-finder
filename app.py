@@ -88,14 +88,34 @@ def episode_html(ep, segs) -> str:
 
 
 # ---------- sidebar ----------
+PROVIDERS = {   # provider -> (LiteLLM prefix, env var for the key, suggested models, where to get a key)
+    "Google Gemini": ("gemini", "GEMINI_API_KEY",
+                      ["gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3.1-pro-preview"],
+                      "https://aistudio.google.com/apikey (free tier)"),
+    "OpenAI": ("openai", "OPENAI_API_KEY", ["gpt-4o-mini", "gpt-4o", "gpt-4.1", "gpt-4.1-mini"],
+               "https://platform.openai.com/api-keys"),
+    "Anthropic": ("anthropic", "ANTHROPIC_API_KEY",
+                  ["claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-5-5"],
+                  "https://console.anthropic.com/settings/keys"),
+    "Groq": ("groq", "GROQ_API_KEY", ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+             "https://console.groq.com/keys (free tier)"),
+}
+CUSTOM = "Custom model id…"
+
 with st.sidebar:
-    st.header("Settings")
-    model = st.text_input("Model (LiteLLM string)", llm.DEFAULT_MODEL,
-                          help="e.g. gemini/gemini-3-flash-preview, groq/llama-3.3-70b-versatile, anthropic/claude-sonnet-4-5")
-    key_in = st.text_input("API key (optional if set in .env)", type="password")
-    if key_in:
-        prov = model.split("/")[0].upper()
-        os.environ[f"{ {'GEMINI': 'GEMINI', 'GOOGLE': 'GEMINI'}.get(prov, prov) }_API_KEY"] = key_in
+    st.header("Model settings")
+    provider = st.selectbox("1 · Provider", list(PROVIDERS))
+    prefix, env_var, model_list, key_url = PROVIDERS[provider]
+    choice = st.selectbox("2 · Model", model_list + [CUSTOM])
+    model_name = st.text_input("Model id", placeholder="exact model id from the provider") if choice == CUSTOM else choice
+    model = f"{prefix}/{model_name.strip()}" if model_name.strip() else ""
+    user_key = st.text_input("3 · Your API key", type="password",
+                             help="Used only for this session's requests. It is never saved or written to disk.")
+    st.caption(f"Get a key: {key_url}")
+    server_key = bool(os.environ.get(env_var))
+    if not user_key and server_key:
+        st.caption("No key entered: using the app owner's key for this provider (limited free quota).")
+    api_key = user_key.strip() or None
     batch = st.slider("Episodes per LLM call", 1, 10, 5, help="Bigger = fewer requests (free tiers allow few per day)")
     top_n = st.slider("Promos to show", 5, 40, 15)
     do_judge = st.checkbox("Run independent quality check", True)
@@ -137,6 +157,12 @@ with tab_run:
         if not folder or not Path(folder).is_dir():
             st.error("Upload files or give a valid folder path.")
             st.stop()
+        if not mock and not model:
+            st.error("Enter a model id.")
+            st.stop()
+        if not mock and not api_key and not os.environ.get(env_var):
+            st.error(f"Enter your {provider} API key in the sidebar (field 3).")
+            st.stop()
         try:
             with st.status("Running pipeline…", expanded=True) as status:
                 st.write("**1/4 Parsing screenplays (code)**")
@@ -145,18 +171,18 @@ with tab_run:
                 st.write(f"→ {len(episodes)} episodes, {sum(len(e.beats) for e in episodes)} timed entries")
 
                 st.write("**2/4 LLM proposes promos, then code validates every timestamp**")
-                cands, log = find_all(episodes, model, 3, 8, mock, batch)
+                cands, log = find_all(episodes, model, 3, 8, mock, batch, api_key)
                 st.write(f"→ {log['raw_candidates']} proposed → {log['valid']} valid "
                          f"({len(log['rejected'])} rejected, {log['duplicates_removed']} duplicates)")
 
                 st.write("**3/4 LLM ranks all candidates (sees the real first/last lines)**")
-                ranked = rank(cands, eps, model, 8, mock)
+                ranked = rank(cands, eps, model, 8, mock, api_key)
                 st.write(f"→ {len(ranked)} ranked")
 
                 stats = None
                 if do_judge and not mock and ranked:
                     st.write("**4/4 Independent 'new viewer' judge checks the clips**")
-                    stats = judge(ranked, eps, model, 8)
+                    stats = judge(ranked, eps, model, 8, api_key=api_key)
                     st.write(f"→ top-10 would post: {stats['top_k_would_post']}/{stats['top_k']}")
                 status.update(label="Done", state="complete")
             st.session_state.update(ranked=ranked, eps=eps, log=log, stats=stats)

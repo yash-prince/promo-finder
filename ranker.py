@@ -21,7 +21,7 @@ def first_last(c: Candidate, eps: dict[int, Episode]) -> tuple[str, str]:
     return (lines_first[0] if lines_first else ""), (lines_last[-1] if lines_last else "")
 
 
-def rank(cands: list[Candidate], eps: dict[int, Episode], model: str, rpm: int, mock: bool) -> list[Ranked]:
+def rank(cands: list[Candidate], eps: dict[int, Episode], model: str, rpm: int, mock: bool, api_key: str | None = None) -> list[Ranked]:
     pool = sorted(cands, key=lambda c: -c.self_score)[:POOL]
     scores: dict[str, tuple[float, str]] = {}
     if not mock:
@@ -31,7 +31,7 @@ def rank(cands: list[Candidate], eps: dict[int, Episode], model: str, rpm: int, 
             items.append({"id": c.id, "episode": c.segments[0].episode, "duration_s": round(c.duration),
                           "opening_line": first, "final_line": last, "hook": c.hook, "cliffhanger": c.cliffhanger,
                           "self_scores": [c.hook_score, c.cliffhanger_score, c.standalone_score]})
-        data = llm.ask_json(RANKER_SYSTEM, json.dumps(items, ensure_ascii=False), model, rpm)
+        data = llm.ask_json(RANKER_SYSTEM, json.dumps(items, ensure_ascii=False), model, rpm, api_key=api_key)
         for r in data.get("ranking", []):
             scores[str(r.get("id"))] = (float(r.get("score", 0)), r.get("reason", ""))
 

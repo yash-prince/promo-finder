@@ -13,7 +13,7 @@ from parser import clip_text
 from prompts import JUDGE_SYSTEM
 
 
-def judge(ranked: list[Ranked], eps: dict[int, Episode], model: str, rpm: int, top_k: int = 10, bottom_k: int = 5):
+def judge(ranked: list[Ranked], eps: dict[int, Episode], model: str, rpm: int, top_k: int = 10, bottom_k: int = 5, api_key: str | None = None):
     sample = ranked[:top_k] + ranked[-bottom_k:] if len(ranked) > top_k + bottom_k else ranked
 
     clips = []
@@ -22,7 +22,7 @@ def judge(ranked: list[Ranked], eps: dict[int, Episode], model: str, rpm: int, t
         text = f"{nl}---(cut to next moment)---{nl}".join(
             clip_text(eps[s.episode], s.start, s.end) for s in r.candidate.segments)
         clips.append(f"##### CLIP id={r.candidate.id}{nl}{text}")
-    data = llm.ask_json(JUDGE_SYSTEM, (chr(10) * 2).join(clips), model, rpm, temperature=0.0)   # one call for all clips
+    data = llm.ask_json(JUDGE_SYSTEM, (chr(10) * 2).join(clips), model, rpm, temperature=0.0, api_key=api_key)   # one call for all clips
     by_id = {str(j.get("id")): j for j in data.get("judgements", [])}
     for r in sample:
         r.judge = by_id.get(r.candidate.id)

@@ -29,7 +29,7 @@ def _mock_candidates(ep: Episode) -> list[dict]:
     return out
 
 
-def find_all(episodes: list[Episode], model: str, workers: int, rpm: int, mock: bool, batch_size: int = 5):
+def find_all(episodes: list[Episode], model: str, workers: int, rpm: int, mock: bool, batch_size: int = 5, api_key: str | None = None):
     summaries = build_summaries(episodes)
     by_num = {e.number: e for e in episodes}
 
@@ -38,7 +38,7 @@ def find_all(episodes: list[Episode], model: str, workers: int, rpm: int, mock: 
             return [(ep, _mock_candidates(ep)) for ep in batch]
         sep = chr(10) * 2
         text = sep.join(f"=== EPISODE {e.number} (length {e.duration:.0f}s) ==={chr(10)}{compact(e)}" for e in batch)
-        data = llm.ask_json(FINDER_SYSTEM, finder_user(summaries, text), model, rpm)
+        data = llm.ask_json(FINDER_SYSTEM, finder_user(summaries, text), model, rpm, api_key=api_key)
         grouped: dict[int, list] = {e.number: [] for e in batch}
         for c in data.get("candidates", []):
             try:

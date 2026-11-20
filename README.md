@@ -17,6 +17,8 @@ Other useful flags: `--limit 5` (first 5 episodes only) · `--top 20` · `--no-j
 ```bash
 streamlit run app.py      # opens http://localhost:8501
 ```
+Pick a **provider** (Gemini / OpenAI / Anthropic / Groq), a **model** (or a custom id) and paste your **API key** in the sidebar.
+The key is sent only with that session's requests and is never stored.
 Upload episode `.txt` files (or one `.zip`), press **Find promos**. See ranked promos, hook/cliffhanger highlighted
 inside each clip, the full episode with the clip marked, and the independent quality scores. Download CSV/JSON.
 
